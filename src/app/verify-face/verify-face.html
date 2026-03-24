@@ -1,0 +1,112 @@
+<div class="app-container">
+  <div class="card verify-card">
+    <header class="card-header">
+      <h2>Face Verification</h2>
+      <p>AWS Rekognition CompareFaces diagnostics</p>
+    </header>
+
+    <div class="compare-grid">
+      <!-- Source Image -->
+      <div class="upload-zone" (click)="sourceInput.click()" [class.has-image]="sourcePreview()">
+        <input #sourceInput type="file" accept="image/*" hidden (change)="onSourceFileSelected($event)">
+        <ng-container *ngIf="!sourcePreview()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            style="color: #94a3b8;">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <p>Source Image</p>
+          <span class="upload-hint">JPG, PNG, WEBP</span>
+        </ng-container>
+        <img *ngIf="sourcePreview()" [src]="sourcePreview()" alt="Source">
+        <div class="upload-meta">
+          <span class="file-name" [title]="sourceFileName()">{{ sourceFileName() }}</span>
+          <span class="file-btn">Selecionar</span>
+        </div>
+      </div>
+
+      <div class="vs-divider">VS</div>
+
+      <!-- Target Image -->
+      <div class="upload-zone" (click)="targetInput.click()" [class.has-image]="targetPreview()">
+        <input #targetInput type="file" accept="image/*" hidden (change)="onTargetFileSelected($event)">
+        <ng-container *ngIf="!targetPreview()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            style="color: #94a3b8;">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <p>Target Image</p>
+          <span class="upload-hint">JPG, PNG, WEBP</span>
+        </ng-container>
+        <img *ngIf="targetPreview()" [src]="targetPreview()" alt="Target">
+        <div class="upload-meta">
+          <span class="file-name" [title]="targetFileName()">{{ targetFileName() }}</span>
+          <span class="file-btn">Selecionar</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions actions-center">
+      <button class="btn-primary verify-button" (click)="verifyFace()"
+        [disabled]="!sourceFile || !targetFile || isLoading()">
+        {{ isLoading() ? 'Processing request...' : 'Compare via AWS Rekognition' }}
+      </button>
+    </div>
+
+    <div *ngIf="isLoading()" class="loading-overlay loading-margin">
+      <div class="spinner"></div>
+      <p>Awaiting AWS response...</p>
+    </div>
+
+    <div *ngIf="error()" class="error no-results">
+      {{ error() }}
+    </div>
+
+    <div *ngIf="verifyResult()" class="results-section">
+      <div class="dev-header">
+        <h3>Verification Metrics</h3>
+        <span class="status-badge" [class.match]="verifyResult().FaceMatches?.length > 0">
+          {{ verifyResult().FaceMatches?.length > 0 ? 'MATCH' : 'NO MATCH' }}
+        </span>
+      </div>
+
+      <div class="result-cards modern-cards">
+        <div class="result-card">
+          <span class="label">Similarity Score</span>
+          <span class="value">{{ (verifyResult().FaceMatches?.[0]?.Similarity || 0) | number:'1.0-2' }}%</span>
+          <div class="metric-line">
+            <span class="metric-fill" [style.width.%]="verifyResult().FaceMatches?.[0]?.Similarity || 0"></span>
+          </div>
+        </div>
+        <div class="result-card">
+          <span class="label">Source Confidence</span>
+          <span class="value">{{ verifyResult().SourceImageFace?.Confidence | number:'1.0-2' }}%</span>
+          <div class="metric-line">
+            <span class="metric-fill" [style.width.%]="verifyResult().SourceImageFace?.Confidence || 0"></span>
+          </div>
+        </div>
+        <div class="result-card" *ngIf="verifyResult().FaceMatches?.length > 0">
+          <span class="label">Target Match Confidence</span>
+          <span class="value">{{ verifyResult().FaceMatches[0].Face?.Confidence | number:'1.0-2' }}%</span>
+          <div class="metric-line">
+            <span class="metric-fill" [style.width.%]="verifyResult().FaceMatches[0].Face?.Confidence || 0"></span>
+          </div>
+        </div>
+        <div class="result-card" *ngIf="verifyResult().UnmatchedFaces?.length > 0">
+          <span class="label">Unmatched Faces In Target</span>
+          <span class="value">{{ verifyResult().UnmatchedFaces?.length }}</span>
+        </div>
+      </div>
+
+      <details class="dev-details" open>
+        <summary>Raw JSON Payload</summary>
+        <pre class="json-pre">{{ verifyResult() | json }}</pre>
+      </details>
+    </div>
+  </div>
+</div>
