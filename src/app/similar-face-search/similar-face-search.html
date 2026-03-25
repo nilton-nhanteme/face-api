@@ -1,0 +1,122 @@
+<main class="app-container">
+  <div class="card similar-card">
+    <header class="card-header">
+      <h2>Face Similar Search</h2>
+      <p>Gestao de colecoes e busca de faces no AWS Rekognition</p>
+    </header>
+
+    <section class="panel global-panel">
+      <h3>Colecao Ativa</h3>
+      <div class="global-controls">
+        <select class="text-input" [(ngModel)]="activeCollectionId" [disabled]="loadingCollections()">
+          <option [ngValue]="''" *ngIf="availableCollections().length === 0">Nenhuma colecao encontrada</option>
+          <option *ngFor="let collection of availableCollections()" [value]="collection">{{ collection }}</option>
+        </select>
+        <button class="btn btn-ghost" (click)="refreshCollections()" [disabled]="loadingCollections()">
+          {{ loadingCollections() ? 'Atualizando...' : 'Atualizar' }}
+        </button>
+      </div>
+    </section>
+
+    <section class="panel-grid">
+      <article class="panel">
+        <h3>1. Criar Colecao</h3>
+        <label class="field-label" for="createCollectionId">Collection ID (opcional)</label>
+        <input id="createCollectionId" class="text-input" type="text" [(ngModel)]="createCollectionId"
+          placeholder="se vazio, sera gerado automaticamente" />
+        <button class="btn btn-primary" (click)="createCollection()" [disabled]="createCollectionLoading()">
+          {{ createCollectionLoading() ? 'Criando colecao...' : 'Criar Colecao' }}
+        </button>
+        <p class="status" *ngIf="createCollectionStatus()">{{ createCollectionStatus() }}</p>
+      </article>
+
+      <article class="panel">
+        <h3>2. Indexar Face No Cofre</h3>
+        <p class="hint">Colecao usada: <strong>{{ activeCollectionId || 'nenhuma selecionada' }}</strong></p>
+
+        <label class="upload-zone" [class.has-image]="indexPreviews().length > 0">
+          <input type="file" accept="image/*" multiple hidden (change)="onIndexFileSelected($event)" />
+          <ng-container *ngIf="indexPreviews().length === 0">
+            <strong>Selecionar imagem(ns) para indexacao</strong>
+            <span>JPG, PNG, WEBP</span>
+          </ng-container>
+          <div class="preview-list" *ngIf="indexPreviews().length > 0">
+            <div class="preview-item" *ngFor="let preview of indexPreviews()">
+              <img [src]="preview.url" [alt]="preview.name" />
+              <span>{{ preview.name }}</span>
+            </div>
+          </div>
+        </label>
+
+        <p class="hint">External Image ID sera gerado automaticamente para cada arquivo.</p>
+
+        <button class="btn btn-primary" (click)="indexFace()" [disabled]="indexFaceLoading()">
+          {{ indexFaceLoading() ? 'Indexando...' : 'Indexar Face' }}
+        </button>
+        <p class="status" *ngIf="indexStatus()">{{ indexStatus() }}</p>
+      </article>
+    </section>
+
+    <section class="panel search-panel">
+      <h3>3. Search Similar Faces</h3>
+      <div class="search-fields">
+        <div class="field-group">
+          <label class="field-label">Colecao usada</label>
+          <input class="text-input" type="text" [value]="activeCollectionId || 'nenhuma selecionada'" readonly />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="faceMatchThreshold">Threshold (%)</label>
+          <input id="faceMatchThreshold" class="text-input" type="number" min="0" max="100"
+            [(ngModel)]="faceMatchThreshold" />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="maxFaces">Max Faces</label>
+          <input id="maxFaces" class="text-input" type="number" min="1" max="20" [(ngModel)]="maxFaces" />
+        </div>
+      </div>
+
+      <label class="upload-zone" [class.has-image]="queryPreview()">
+        <input type="file" accept="image/*" hidden (change)="onQueryFileSelected($event)" />
+        <ng-container *ngIf="!queryPreview()">
+          <strong>Selecionar imagem para busca</strong>
+          <span>Use uma selfie para procurar no cofre</span>
+        </ng-container>
+        <img *ngIf="queryPreview()" [src]="queryPreview()" alt="Preview de busca" />
+      </label>
+
+      <div class="actions">
+        <button class="btn btn-primary" (click)="searchSimilarFaces()" [disabled]="searchLoading()">
+          {{ searchLoading() ? 'Buscando...' : 'Buscar Face Similar' }}
+        </button>
+      </div>
+
+      <p class="error" *ngIf="searchError()">{{ searchError() }}</p>
+
+      <div class="results-section" *ngIf="searchResult()">
+        <h4>Resultados Encontrados ({{ searchResult().faceMatches?.length || 0 }})</h4>
+
+        <div class="result-cards" *ngIf="(searchResult().faceMatches?.length || 0) > 0; else noMatchesTemplate">
+          <article class="result-card" *ngFor="let match of searchResult().faceMatches">
+            <span class="label">Face ID</span>
+            <span class="value">{{ match.faceId || '-' }}</span>
+
+            <span class="label">External Image ID</span>
+            <span class="value">{{ match.externalImageId || '-' }}</span>
+
+            <span class="label">Similaridade</span>
+            <span class="value">{{ match.similarity | number:'1.0-2' }}%</span>
+
+            <span class="label">Confianca da face</span>
+            <span class="value">{{ match.confidence | number:'1.0-2' }}%</span>
+          </article>
+        </div>
+
+        <ng-template #noMatchesTemplate>
+          <p class="no-results">Nenhuma face similar encontrada com os filtros informados.</p>
+        </ng-template>
+      </div>
+    </section>
+  </div>
+</main>

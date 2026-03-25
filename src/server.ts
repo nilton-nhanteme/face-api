@@ -6,9 +6,13 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { join } from 'node:path';
-import { RekognitionClient, DetectFacesCommand } from '@aws-sdk/client-rekognition';
+import { RekognitionClient, DetectFacesCommand, IndexFacesCommand, FaceRecord$ } from '@aws-sdk/client-rekognition';
 import { CompareFacesCommand, CompareFacesResponse } from "@aws-sdk/client-rekognition";
+import { SearchFacesByImageCommand } from '@aws-sdk/client-rekognition';
 import { environment } from './environments/environment';
+import { CreateCollectionCommand } from '@aws-sdk/client-rekognition';
+import { ListCollectionsCommand } from '@aws-sdk/client-rekognition';
+import { error } from 'node:console';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
@@ -86,6 +90,125 @@ app.post('/api/verify-face', async (req, res): Promise<any> => {
   }
 });
 const angularApp = new AngularNodeAppEngine();
+
+/* 
+API Proxy para o SearchFacesByImage (Busca por faces similares em uma coleção)
+ */
+app.post('/api/search-similar-faces', async (req, res): Promise<any> => {
+  try {
+    const { imageBase64, collectionId } = req.body;
+
+    if (!imageBase64 || !collectionId) {
+      return res.status(400).json({
+        error: 'Imagem ou ID da coleção não fornecidos',
+      });
+    }
+
+    const buffer = Buffer.from(imageBase64, 'base64');
+
+    //Configuração do comando AWS
+    const command = new SearchFacesByImageCommand({
+      CollectionId: collectionId, //Cofre criado previamente no AWS Rekognition
+      Image: {
+        Bytes: buffer //Imagem convertida para buffer
+      },
+      FaceMatchThreshold: 80, //Limite de similaridade para considerar uma correspondência
+      MaxFaces: 5 //Número máximo de correspondências a retornar
+    });
+
+    const data = await rekognitionClient.send(command);
+    return res.json(data);
+
+  } catch (error: any) {
+    console.error('Erro no Rekognition Search Proxy:', error);
+    return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+  }
+});
+
+/*
+API Proxy para criar uma coleção no Rekognition (Administração de coleções de faces)
+ */
+app.post('/api/admin/create-collection', async (req, res): Promise<any> => {
+  try {
+    const { collectionId } = req.body;
+
+    if (!collectionId) {
+      return res.status(400).json({
+        error: 'O nome da coleção é obrigatório',
+      });
+    }
+
+    const command = new CreateCollectionCommand({
+      CollectionId: collectionId
+    });
+
+    const data = await rekognitionClient.send(command);
+    return res.status(200).json({
+      message: `Coleção '${collectionId}' criada com sucesso`,
+      statusCode: data.$metadata.httpStatusCode,
+      data: data
+    })
+
+  } catch (error: any) {
+    console.error('Erro no Rekognition Create Collection Proxy:', error);
+    return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+  }
+});
+
+/*
+API Proxy para listar coleções disponíveis no Rekognition
+ */
+app.get('/api/admin/collections', async (_req, res): Promise<any> => {
+  try {
+    const command = new ListCollectionsCommand({
+      MaxResults: 100,
+    });
+
+    const data = await rekognitionClient.send(command);
+    return res.status(200).json({
+      collectionIds: data.CollectionIds ?? [],
+    });
+  } catch (error: any) {
+    console.error('Erro ao listar coleções do Rekognition:', error);
+    return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+  }
+});
+
+/*
+API Proxy para indexar uma face em uma coleção (Administração de faces nas coleções)
+  - Permite adicionar uma nova face a uma coleção existente, associando-a a um ID externo para fácil identificação.
+ */
+app.post('/api/admin/index-face', async (req, res): Promise<any> => {
+  try {
+    const { collectionId, imageBase64, externalImageId } = req.body;
+
+    if (!imageBase64 || !collectionId || !externalImageId) {
+      return res.status(400).json({
+        error: 'Imagem, ID da coleção e ID externo são obrigatórios',
+      });
+    }
+
+    const buffer = Buffer.from(imageBase64, 'base64');
+
+    const command = new IndexFacesCommand({
+      CollectionId: collectionId,
+      Image: {
+        Bytes: buffer
+      },
+      ExternalImageId: externalImageId,
+    });
+
+    const data = await rekognitionClient.send(command);
+    return res.status(200).json({
+      message: `Face indexada com sucesso na coleção '${collectionId}'`,
+      FaceRecords: data.FaceRecords, // Aqui virá o FaceId gerado pelo Rekognition da AWS
+    });
+
+  } catch (error: any) {
+    console.error('Erro no Rekognition Index Face Proxy:', error);
+    return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+  }
+})
 
 /**
  * Example Express Rest API endpoints can be defined here.
