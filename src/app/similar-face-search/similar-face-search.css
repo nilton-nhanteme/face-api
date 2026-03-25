@@ -244,6 +244,43 @@
   gap: 0.15rem;
 }
 
+.match-photo-wrap {
+  width: 100%;
+  min-height: 170px;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+
+.match-photo {
+  width: 100%;
+  height: 170px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.match-photo.is-hidden {
+  display: none;
+}
+
+.image-missing {
+  height: 170px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.match-photo.is-hidden + .image-missing {
+  display: flex;
+}
+
 .result-card .label {
   font-size: 0.72rem;
   text-transform: uppercase;

@@ -96,14 +96,17 @@
 
       <div class="results-section" *ngIf="searchResult()">
         <h4>Resultados Encontrados ({{ searchResult().faceMatches?.length || 0 }})</h4>
+        <p class="hint" *ngIf="searchResult().hiddenMatchesCount > 0">
+          {{ searchResult().hiddenMatchesCount }} resultado(s) ocultado(s) por nao terem externalImageId.
+        </p>
 
         <div class="result-cards" *ngIf="(searchResult().faceMatches?.length || 0) > 0; else noMatchesTemplate">
           <article class="result-card" *ngFor="let match of searchResult().faceMatches">
-            <span class="label">Face ID</span>
-            <span class="value">{{ match.faceId || '-' }}</span>
-
-            <span class="label">External Image ID</span>
-            <span class="value">{{ match.externalImageId || '-' }}</span>
+            <div class="match-photo-wrap">
+              <img class="match-photo" [src]="buildS3ImageUrl(match.externalImageId)"
+                [alt]="'Foto de ' + (match.externalImageId || 'Pessoa')" (error)="onResultImageError($event)" />
+              <div class="image-missing">Imagem indisponivel</div>
+            </div>
 
             <span class="label">Similaridade</span>
             <span class="value">{{ match.similarity | number:'1.0-2' }}%</span>

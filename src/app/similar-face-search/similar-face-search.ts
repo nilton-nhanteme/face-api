@@ -12,6 +12,8 @@ import { FaceApiService } from '../services/face-api';
   styleUrl: './similar-face-search.css',
 })
 export class SimilarFaceSearch implements OnDestroy {
+  private readonly s3ImagesBaseUrl = 'https://rekogn-images-collection.s3.us-east-1.amazonaws.com';
+
   public createCollectionId = '';
   public activeCollectionId = '';
   public faceMatchThreshold = 80;
@@ -164,9 +166,12 @@ export class SimilarFaceSearch implements OnDestroy {
           return match;
         });
 
+        const visibleMatches = normalizedMatches.filter((match: any) => !!match?.externalImageId);
+
         this.searchResult.set({
           ...result,
-          faceMatches: normalizedMatches,
+          faceMatches: visibleMatches,
+          hiddenMatchesCount: normalizedMatches.length - visibleMatches.length,
         });
         this.searchLoading.set(false);
       },
@@ -201,6 +206,19 @@ export class SimilarFaceSearch implements OnDestroy {
       .slice(0, 80);
 
     return `${sanitizedName}_${Date.now()}_${index}`;
+  }
+
+  buildS3ImageUrl(externalImageId?: string): string {
+    if (!externalImageId) {
+      return '';
+    }
+
+    return `${this.s3ImagesBaseUrl}/${encodeURIComponent(externalImageId)}.jpg`;
+  }
+
+  onResultImageError(event: Event): void {
+    const target = event.target as HTMLImageElement;
+    target.classList.add('is-hidden');
   }
 
   refreshCollections(): void {

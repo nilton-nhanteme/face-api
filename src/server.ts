@@ -13,6 +13,7 @@ import { environment } from './environments/environment';
 import { CreateCollectionCommand } from '@aws-sdk/client-rekognition';
 import { ListCollectionsCommand } from '@aws-sdk/client-rekognition';
 import { error } from 'node:console';
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
@@ -30,6 +31,7 @@ function getRequiredEnv(value: string | undefined, name: string): string {
 const region = getRequiredEnv(environment.region, 'REGION');
 const accessKeyId = getRequiredEnv(environment.access_key_id, 'ACCESS_KEY_ID');
 const secretAccessKey = getRequiredEnv(environment.secret_access_key, 'SECRET_ACCESS_KEY');
+const s3BucketName = getRequiredEnv(environment.s3_bucket_name, 'S3_BUCKET_NAME');
 
 const rekognitionClient = new RekognitionClient({
   region,
@@ -38,6 +40,14 @@ const rekognitionClient = new RekognitionClient({
     secretAccessKey,
   }
 });
+
+const s3Client = new S3Client({
+  region,
+  credentials: {
+    accessKeyId,
+    secretAccessKey,
+  }
+})
 
 /**
  * API Proxy para o Rekognition (Evita CORS e protege as chaves)
@@ -105,6 +115,8 @@ app.post('/api/search-similar-faces', async (req, res): Promise<any> => {
     }
 
     const buffer = Buffer.from(imageBase64, 'base64');
+    const faceMatchThreshold = Math.min(Math.max(Number(req.body?.faceMatchThreshold ?? 80), 0), 100);
+    const maxFaces = Math.min(Math.max(Number(req.body?.maxFaces ?? 5), 1), 20);
 
     //Configuração do comando AWS
     const command = new SearchFacesByImageCommand({
@@ -112,8 +124,8 @@ app.post('/api/search-similar-faces', async (req, res): Promise<any> => {
       Image: {
         Bytes: buffer //Imagem convertida para buffer
       },
-      FaceMatchThreshold: 80, //Limite de similaridade para considerar uma correspondência
-      MaxFaces: 5 //Número máximo de correspondências a retornar
+      FaceMatchThreshold: faceMatchThreshold,
+      MaxFaces: maxFaces,
     });
 
     const data = await rekognitionClient.send(command);
@@ -198,7 +210,16 @@ app.post('/api/admin/index-face', async (req, res): Promise<any> => {
       ExternalImageId: externalImageId,
     });
 
+    const s3Command = new PutObjectCommand({
+      Bucket: s3BucketName,
+      Key: `${externalImageId}.jpg`,
+      Body: buffer,
+      ContentType: 'image/jpeg',
+    })
+
     const data = await rekognitionClient.send(command);
+
+    await s3Client.send(s3Command);
     return res.status(200).json({
       message: `Face indexada com sucesso na coleção '${collectionId}'`,
       FaceRecords: data.FaceRecords, // Aqui virá o FaceId gerado pelo Rekognition da AWS
