@@ -2,7 +2,7 @@ import { Component, ElementRef, Input, OnDestroy, OnInit, Output, ViewChild, Eve
 import * as React from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { FaceLivenessDetector } from '@aws-amplify/ui-react-liveness';
-import '@aws-amplify/ui-react/styles.css'; // Estilos obrigatórios do componente da
+
 
 @Component({
   selector: 'app-liveness-camera',
