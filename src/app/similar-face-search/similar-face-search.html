@@ -79,11 +79,8 @@
       <!-- Modal Flutuante de Prova de Vida -->
       <div class="liveness-modal-overlay" *ngIf="isLivenessActive() && sessionId()">
         <div class="liveness-camera-container">
-          <app-liveness-camera 
-            [sessionId]="sessionId()!" 
-            (analysisComplete)="onLivenessComplete()"
-            (error)="onLivenessError($event)"
-            (userCancel)="onLivenessCancel()">
+          <app-liveness-camera [sessionId]="sessionId()!" (analysisComplete)="onLivenessComplete()"
+            (error)="onLivenessError($event)" (userCancel)="onLivenessCancel()">
           </app-liveness-camera>
         </div>
       </div>
