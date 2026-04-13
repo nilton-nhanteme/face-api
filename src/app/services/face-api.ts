@@ -63,7 +63,7 @@ export class FaceApiService {
     });
   }
 
-  searchSimilarFaces(sourceBlob: Blob, collectionId: string, faceMatchThreshold = 80, maxFaces = 5): Observable<any> {
+  searchSimilarFaces(sourceBlob: Blob, collectionId: string, faceMatchThreshold = 80, maxFaces = 20): Observable<any> {
     return new Observable(observer => {
       const sourceReader = new FileReader();
       sourceReader.onloadend = () => {

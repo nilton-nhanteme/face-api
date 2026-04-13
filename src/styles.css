@@ -4,3 +4,32 @@ body {
   padding: 0;
   background-color: #f7f9fc;
 }
+
+/* CUSTOMIZAÇÕES DO AWS LIVENESS DETECTOR */
+
+/* Remove o fundo branco ("transparent") da mensagem "Centralize seu rosto" */
+.amplify-liveness-toast {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Melhora a legibilidade do texto que agora está com fundo transparente */
+.amplify-liveness-toast__message {
+  color: #ffffff !important;
+  font-size: 1.5rem !important;
+  text-shadow: 0 4px 6px rgba(0,0,0,0.8);
+  font-weight: 600 !important;
+}
+
+/* Ajusta o vídeo para preencher totalmente o container e evitar aparecer muito pequeno */
+.amplify-liveness-video {
+  object-fit: cover !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-color: transparent !important;
+}
+
+/* Tenta aplicar tracejado onde é possível nas bordas da UI do liveness */
+.amplify-liveness-match-indicator {
+  border-style: dashed !important;
+}

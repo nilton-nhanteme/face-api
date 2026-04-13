@@ -1,6 +1,6 @@
 .verify-card {
-  max-width: 980px;
-  width: 100%;
+  max-width: 1600px;
+  width: 95%;
   margin: 0 auto;
   border: 1px solid #e5e7eb;
   border-radius: 22px;
@@ -37,7 +37,10 @@
 .upload-zone {
   border: 1px dashed #cbd5e1;
   border-radius: 16px;
-  height: 328px;
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  max-height: 520px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -61,13 +64,16 @@
 .upload-zone.has-image {
   border-style: solid;
   border-color: #d5dbe3;
+  padding: 0;
 }
 
 .upload-zone img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: calc(100% - 62px);
+  height: 100%;
   object-fit: cover;
-  border-radius: 12px;
 }
 
 .upload-zone p {
@@ -185,6 +191,7 @@
 }
 
 .actions-center {
+  display: flex;
   justify-content: center;
 }
 
@@ -194,9 +201,26 @@
   border-radius: 14px;
   min-height: 52px;
   padding: 0.9rem 1.25rem;
-  background: linear-gradient(90deg, #0f172a, #1e293b);
-  box-shadow: 0 12px 24px -16px rgba(15, 23, 42, 0.8);
+  background: #3b82f6;
+  box-shadow: 0 4px 12px -2px rgba(59, 130, 246, 0.5);
   letter-spacing: 0.01em;
+  color: white;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.verify-button:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-2px);
+}
+
+.verify-button:disabled {
+  background-color: #93c5fd;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .verify-button:hover:not(:disabled) {

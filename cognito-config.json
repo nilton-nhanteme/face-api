@@ -1,0 +1,10 @@
+{
+  "IdentityPoolId": "sa-east-1:6e888971-8b8d-4fe9-bc91-fa243239e7aa",
+  "IdentityPoolName": "LivenessPool",
+  "Region": "sa-east-1",
+  "AllowUnauthenticatedIdentities": true,
+  "Roles": {
+    "unauthenticated": "arn:aws:iam::629205655921:role/LivenessPool_Unauth_Role"
+  },
+  "AccountId": "629205655921"
+}

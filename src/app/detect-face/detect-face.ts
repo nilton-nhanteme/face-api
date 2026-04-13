@@ -48,7 +48,7 @@ export class DetectFace {
       stream.getTracks().forEach(track => track.stop());
     }
     this.isCameraActive.set(false);
-  }
+  }                   
 
   public triggerSnapshot() {
     const video = this.videoElement.nativeElement;

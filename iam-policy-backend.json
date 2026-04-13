@@ -1,0 +1,41 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "RekognitionFaceLivenessBackend",
+            "Effect": "Allow",
+            "Action": [
+                "rekognition:CreateFaceLivenessSession",
+                "rekognition:GetFaceLivenessSessionResults"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "RekognitionExistingPermissions",
+            "Effect": "Allow",
+            "Action": [
+                "rekognition:DetectFaces",
+                "rekognition:CompareFaces",
+                "rekognition:IndexFaces",
+                "rekognition:SearchFacesByImage",
+                "rekognition:CreateCollection",
+                "rekognition:ListCollections",
+                "rekognition:DescribeCollection"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "S3Permissions",
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::rekogn-images-collection",
+                "arn:aws:s3:::rekogn-images-collection/*"
+            ]
+        }
+    ]
+}

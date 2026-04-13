@@ -2,6 +2,20 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.3.
 
+## 📚 Documentação do Projeto
+
+Para facilitar a compreensão do sistema, a documentação foi dividida em seções detalhadas localizadas na pasta `docs/`:
+
+- **[Retornos da API (AWS Rekognition)](docs/api-responses.md)**: Detalhes sobre os objetos JSON retornados por cada endpoint.
+- **[Servidor Backend](docs/server.md)**: Explicação sobre a arquitetura do servidor Express e o Proxy da AWS.
+- **[Lógica da Aplicação](docs/application.md)**: Detalhes sobre o componente principal do Angular e gerenciamento de estado.
+- **[Serviço de Face API](docs/face-api.md)**: Explicação sobre como o frontend se comunica com o backend.
+- **[Busca de Faces Similares](docs/face-similar-search.md)**: Documentação específica sobre o fluxo de busca e indexação.
+- **[Configuração de Permissões IAM](docs/iam-permissions-setup.md)**: Guia completo para configurar permissões do Face Liveness.
+- **[Configuração do Cognito Identity Pool](docs/cognito-setup.md)**: Guia de configuração do Cognito para usuários não autenticados.
+
+---
+
 ## Development server
 
 To start a local development server, run:

@@ -6,12 +6,18 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { join } from 'node:path';
-import { RekognitionClient, DetectFacesCommand, IndexFacesCommand, FaceRecord$ } from '@aws-sdk/client-rekognition';
-import { CompareFacesCommand, CompareFacesResponse } from "@aws-sdk/client-rekognition";
-import { SearchFacesByImageCommand } from '@aws-sdk/client-rekognition';
+import { 
+  RekognitionClient, 
+  DetectFacesCommand, 
+  IndexFacesCommand, 
+  CreateFaceLivenessSessionCommand, 
+  GetFaceLivenessSessionResultsCommand,
+  CompareFacesCommand, 
+  SearchFacesByImageCommand,
+  CreateCollectionCommand,
+  ListCollectionsCommand
+} from '@aws-sdk/client-rekognition';
 import { environment } from './environments/environment';
-import { CreateCollectionCommand } from '@aws-sdk/client-rekognition';
-import { ListCollectionsCommand } from '@aws-sdk/client-rekognition';
 import { error } from 'node:console';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
@@ -73,6 +79,24 @@ app.post('/api/detect-face', async (req, res): Promise<any> => {
   }
 });
 
+app.get('/api/create-liveness-session', async (req, res): Promise<any> => {
+  try {
+    //Cria nova sessão de liveness em branco
+    const faceLivenessCommand = new CreateFaceLivenessSessionCommand({});
+    const data = await rekognitionClient.send(faceLivenessCommand);
+
+    //Devolve o ID da sessão para o frontend
+    return res.json({
+      sessionId: data.SessionId
+    });
+  } catch (erro: any) {
+    console.error('Erro ao criar sessão de Liveness: ', erro);
+    return res.status(500).json({
+      error: erro.message || 'Erro ao gerar sessão'
+    });
+  }
+})
+
 /**
  * API Proxy para o CompareFaces (Verificação entre duas imagens)
  */
@@ -116,7 +140,7 @@ app.post('/api/search-similar-faces', async (req, res): Promise<any> => {
 
     const buffer = Buffer.from(imageBase64, 'base64');
     const faceMatchThreshold = Math.min(Math.max(Number(req.body?.faceMatchThreshold ?? 80), 0), 100);
-    const maxFaces = Math.min(Math.max(Number(req.body?.maxFaces ?? 5), 1), 20);
+    const maxFaces = Math.min(Math.max(Number(req.body?.maxFaces ?? 20), 1), 25);
 
     //Configuração do comando AWS
     const command = new SearchFacesByImageCommand({
@@ -133,6 +157,61 @@ app.post('/api/search-similar-faces', async (req, res): Promise<any> => {
 
   } catch (error: any) {
     console.error('Erro no Rekognition Search Proxy:', error);
+    return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+  }
+});
+
+/* 
+API Proxy para o SearchFacesByImage com Liveness
+ */
+app.post('/api/search-similar-faces-with-liveness', async (req, res): Promise<any> => {
+  try {
+    const { sessionId, collectionId, faceMatchThreshold, maxFaces } = req.body;
+
+    if (!sessionId || !collectionId) {
+      return res.status(400).json({ error: 'Faltando sessionId ou collectionId.' });
+    }
+
+    const getResultsCommand = new GetFaceLivenessSessionResultsCommand({
+      SessionId: sessionId
+    });
+    const livenessData = await rekognitionClient.send(getResultsCommand);
+
+    if (livenessData.Status !== "SUCCEEDED") {
+      return res.status(400).json({ error: 'A captura ao vivo não foi concluída corretamente.' });
+    }
+
+    const confidence = livenessData.Confidence;
+    if (confidence === undefined || confidence < 90) {
+      return res.status(401).json({ 
+        error: 'Falha na Prova de Vida. A pessoa não parece ser real.', 
+        confidence 
+      });
+    }
+
+    const liveImageBytes = livenessData.ReferenceImage?.Bytes;
+    if (!liveImageBytes) {
+      return res.status(400).json({ error: 'Nenhuma foto pôde ser extraída do vídeo.' });
+    }
+
+    const command = new SearchFacesByImageCommand({
+      CollectionId: collectionId,
+      Image: { Bytes: liveImageBytes },
+      FaceMatchThreshold: Math.min(Math.max(Number(faceMatchThreshold ?? 80), 0), 100),
+      MaxFaces: Math.min(Math.max(Number(maxFaces ?? 20), 1), 25),
+    });
+
+    const searchData = await rekognitionClient.send(command);
+    return res.json({
+      livenessConfidence: confidence,
+      status: livenessData.Status,
+      referenceImage: livenessData.ReferenceImage,
+      auditImages: livenessData.AuditImages,
+      FaceMatches: searchData.FaceMatches
+    });
+
+  } catch (error: any) {
+    console.error('Erro no Rekognition Search Liveness Proxy:', error);
     return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
   }
 });
@@ -285,3 +364,34 @@ if (isMainModule(import.meta.url) || process.env['pm_id']) {
  * Request handler used by the Angular CLI (for dev-server and during build) or Firebase Cloud Functions.
  */
 export const reqHandler = createNodeRequestHandler(app);
+
+/*
+API Proxy para obter os resultados da sessão de liveness
+ */
+app.get('/api/get-liveness-results/:sessionId', async (req, res): Promise<any> => {
+  try {
+    const { sessionId } = req.params;
+    
+    if (!sessionId) {
+      return res.status(400).json({ error: 'SessionId não fornecido' });
+    }
+
+    const { GetFaceLivenessSessionResultsCommand } = await import('@aws-sdk/client-rekognition');
+    
+    const command = new GetFaceLivenessSessionResultsCommand({
+      SessionId: sessionId
+    });
+
+    const data = await rekognitionClient.send(command);
+    
+    return res.json({
+      status: data.Status,
+      confidence: data.Confidence,
+      referenceImage: data.ReferenceImage, // Imagem capturada durante o liveness
+      auditImages: data.AuditImages
+    });
+  } catch (error: any) {
+    console.error('Erro ao obter resultados do liveness:', error);
+    return res.status(500).json({ error: error.message || 'Erro ao obter resultados' });
+  }
+});

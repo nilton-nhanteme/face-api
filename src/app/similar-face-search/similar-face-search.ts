@@ -3,11 +3,12 @@ import { Component, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { FaceApiService } from '../services/face-api';
+import { LivenessCameraComponent } from '../face-liveness/liveness-camera-component';
 
 @Component({
   selector: 'app-similar-face-search',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LivenessCameraComponent],
   templateUrl: './similar-face-search.html',
   styleUrl: './similar-face-search.css',
 })
@@ -17,15 +18,13 @@ export class SimilarFaceSearch implements OnDestroy {
   public createCollectionId = '';
   public activeCollectionId = '';
   public faceMatchThreshold = 80;
-  public maxFaces = 5;
+  public maxFaces = 20;
   public availableCollections = signal<string[]>([]);
   public loadingCollections = signal(false);
 
   private indexFiles: File[] = [];
-  private queryFile: File | null = null;
 
   public indexPreviews = signal<Array<{ name: string; url: string }>>([]);
-  public queryPreview = signal<string | null>(null);
 
   public createCollectionLoading = signal(false);
   public indexFaceLoading = signal(false);
@@ -36,6 +35,9 @@ export class SimilarFaceSearch implements OnDestroy {
   public searchError = signal<string | null>(null);
 
   public searchResult = signal<any | null>(null);
+
+  public isLivenessActive = signal(false);
+  public sessionId = signal<string | null>(null);
 
   constructor(private faceApiService: FaceApiService) {}
 
@@ -123,25 +125,10 @@ export class SimilarFaceSearch implements OnDestroy {
     });
   }
 
-  onQueryFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    this.revokeQueryPreview();
-    this.queryFile = file;
-    this.queryPreview.set(URL.createObjectURL(file));
-    this.searchError.set(null);
-    this.searchResult.set(null);
-  }
-
-  searchSimilarFaces(): void {
+  startLivenessSearch(): void {
     const collection = this.activeCollectionId.trim();
-    if (!collection || !this.queryFile) {
-      this.searchError.set('Selecione uma colecao e uma imagem para busca.');
+    if (!collection) {
+      this.searchError.set('Selecione uma colecao primeiro.');
       return;
     }
 
@@ -149,37 +136,75 @@ export class SimilarFaceSearch implements OnDestroy {
     this.searchError.set(null);
     this.searchResult.set(null);
 
-    this.faceApiService
-      .searchSimilarFaces(this.queryFile, collection, this.faceMatchThreshold, this.maxFaces)
-      .subscribe({
-      next: (result: any) => {
-        const normalizedMatches = (result?.faceMatches ?? result?.FaceMatches ?? []).map((match: any) => {
-          if (match?.Face) {
-            return {
-              faceId: match.Face.FaceId,
-              externalImageId: match.Face.ExternalImageId,
-              similarity: match.Similarity,
-              confidence: match.Face.Confidence,
-            };
-          }
+    fetch('/api/create-liveness-session')
+      .then(res => res.json())
+      .then(data => {
+        if (data.sessionId) {
+          this.sessionId.set(data.sessionId);
+          this.isLivenessActive.set(true);
+        } else {
+          this.searchError.set('Erro: sessão não retornou ID.');
+        }
+      })
+      .catch(err => {
+        this.searchError.set('Erro ao iniciar sessão de liveness: ' + (err.message || err));
+      })
+      .finally(() => this.searchLoading.set(false));
+  }
 
-          return match;
-        });
+  async onLivenessComplete() {
+    this.isLivenessActive.set(false);
+    this.searchLoading.set(true);
 
-        const visibleMatches = normalizedMatches.filter((match: any) => !!match?.externalImageId);
-
-        this.searchResult.set({
-          ...result,
-          faceMatches: visibleMatches,
-          hiddenMatchesCount: normalizedMatches.length - visibleMatches.length,
-        });
-        this.searchLoading.set(false);
-      },
-      error: (err: any) => {
-        this.searchError.set(err?.error?.error || 'Erro ao buscar faces similares.');
-        this.searchLoading.set(false);
-      },
+    try {
+      const response = await fetch('/api/search-similar-faces-with-liveness', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: this.sessionId(),
+          collectionId: this.activeCollectionId.trim(),
+          faceMatchThreshold: this.faceMatchThreshold,
+          maxFaces: this.maxFaces
+        })
       });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro desconhecido');
+      }
+
+      const normalizedMatches = (result?.FaceMatches ?? []).map((match: any) => {
+        if (match?.Face) {
+          return {
+            faceId: match.Face.FaceId,
+            externalImageId: match.Face.ExternalImageId,
+            similarity: match.Similarity,
+            confidence: match.Face.Confidence,
+          };
+        }
+        return match;
+      });
+
+      const visibleMatches = normalizedMatches.filter((match: any) => !!match?.externalImageId);
+
+      this.searchResult.set({
+        ...result,
+        faceMatches: visibleMatches,
+        hiddenMatchesCount: normalizedMatches.length - visibleMatches.length,
+      });
+
+    } catch (err: any) {
+      this.searchError.set('Erro ao buscar faces similares: ' + err.message);
+    } finally {
+      this.searchLoading.set(false);
+    }
+  }
+
+  onLivenessError(err: any) {
+    console.error('Erro no liveness: ', err);
+    this.searchError.set('Erro durante o processo de liveness. ' + (err.message || 'Tente novamente.'));
+    this.isLivenessActive.set(false);
   }
 
   private revokeIndexPreview(): void {
@@ -187,16 +212,8 @@ export class SimilarFaceSearch implements OnDestroy {
     this.indexPreviews.set([]);
   }
 
-  private revokeQueryPreview(): void {
-    const current = this.queryPreview();
-    if (current) {
-      URL.revokeObjectURL(current);
-    }
-  }
-
   private revokePreviews(): void {
     this.revokeIndexPreview();
-    this.revokeQueryPreview();
   }
 
   private generateExternalImageId(file: File, index: number): string {
