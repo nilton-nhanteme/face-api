@@ -1,5 +1,18 @@
 <div class="app-container">
-  <div class="card verify-card" [class.liveness-fullscreen-active]="isLivenessActive()">
+  
+  <!-- Modal Flutuante de Prova de Vida Igual ao Similar Face Search -->
+  <div class="liveness-modal-overlay" *ngIf="isLivenessActive() && sessionId()">
+    <div class="liveness-camera-container">
+      <app-liveness-camera 
+        [sessionId]="sessionId()!"
+        (analysisComplete)="onLivenessComplete()"
+        (error)="onLivenessError($event)"
+        (userCancel)="onLivenessCancel()">
+      </app-liveness-camera>
+    </div>
+  </div>
+
+  <div class="card verify-card">
     <header class="card-header">
       <h2>Comparação de Faces</h2>
       <p>Verificação de similaridade entre duas imagens</p>
@@ -7,7 +20,7 @@
 
     <div class="compare-grid">
       <!-- Source Image (Liveness) -->
-      <div class="liveness-zone" [class.liveness-zone--active]="isLivenessActive()">
+      <div class="liveness-zone">
         
         <ng-container *ngIf="!isLivenessActive()">
           <button class="liveness-start-btn" (click)="startLiveness()" [disabled]="isLoading()">
@@ -23,13 +36,6 @@
             </span>
           </button>
         </ng-container>
-
-        <app-liveness-camera 
-          *ngIf="isLivenessActive() && sessionId()"
-          [sessionId]="sessionId()!"
-          (analysisComplete)="onLivenessComplete()"
-          (error)="onLivenessError($event)">
-        </app-liveness-camera>
 
       </div>
 

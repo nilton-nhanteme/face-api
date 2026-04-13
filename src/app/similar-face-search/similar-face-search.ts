@@ -208,6 +208,13 @@ export class SimilarFaceSearch implements OnDestroy {
     this.searchError.set('Erro durante o processo de liveness. ' + (err.message || 'Tente novamente.'));
   }
 
+  onLivenessCancel(): void {
+    console.log('Captura cancelada pelo usuário na busca (botão sair).');
+    this.isLivenessActive.set(false);
+    this.sessionId.set(null);
+    this.searchLoading.set(false);
+  }
+
   private revokeIndexPreview(): void {
     this.indexPreviews().forEach((preview) => URL.revokeObjectURL(preview.url));
     this.indexPreviews.set([]);

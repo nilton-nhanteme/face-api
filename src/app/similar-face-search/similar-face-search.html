@@ -76,19 +76,23 @@
         </div>
       </div>
 
-      <ng-container *ngIf="isLivenessActive() && sessionId(); else startButton">
-        <app-liveness-camera [sessionId]="sessionId()!" (analysisComplete)="onLivenessComplete()"
-          (error)="onLivenessError($event)">
-        </app-liveness-camera>
-      </ng-container>
-
-      <ng-template #startButton>
-        <div class="actions">
-          <button class="btn btn-primary" (click)="startLivenessSearch()" [disabled]="searchLoading()">
-            {{ searchLoading() ? 'Iniciando câmera...' : 'Iniciar Busca Facial (Liveness)' }}
-          </button>
+      <!-- Modal Flutuante de Prova de Vida -->
+      <div class="liveness-modal-overlay" *ngIf="isLivenessActive() && sessionId()">
+        <div class="liveness-camera-container">
+          <app-liveness-camera 
+            [sessionId]="sessionId()!" 
+            (analysisComplete)="onLivenessComplete()"
+            (error)="onLivenessError($event)"
+            (userCancel)="onLivenessCancel()">
+          </app-liveness-camera>
         </div>
-      </ng-template>
+      </div>
+
+      <div class="actions" *ngIf="!(isLivenessActive() && sessionId())">
+        <button class="btn btn-primary" (click)="startLivenessSearch()" [disabled]="searchLoading()">
+          {{ searchLoading() ? 'Iniciando câmera...' : 'Iniciar Busca Facial (Liveness)' }}
+        </button>
+      </div>
 
       <div *ngIf="searchLoading()" class="spinner-container">
         <p>Buscando na base de dados...</p>

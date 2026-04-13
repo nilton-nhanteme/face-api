@@ -110,6 +110,13 @@ export class VerifyFace {
     this.error.set('Erro durante o processo de liveness. ' + (err.message || 'Tente novamente.'));
   }
 
+  onLivenessCancel() {
+    console.log('Captura cancelada pelo usuário (botão sair).');
+    this.isLivenessActive.set(false);
+    this.sessionId.set(null);
+    this.isLoading.set(false);
+  }
+
   ngOnDestroy(): void {
     this.revokePreviews();
   }
