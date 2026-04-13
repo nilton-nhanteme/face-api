@@ -1,9 +1,10 @@
 name: Deploy to Render
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+#  push:
+#    branches:
+#      - master
 
 jobs:
   deploy:
