@@ -1,5 +1,5 @@
 <div class="app-container">
-  <div class="card verify-card">
+  <div class="card verify-card" [class.liveness-fullscreen-active]="isLivenessActive()">
     <header class="card-header">
       <h2>Comparação de Faces</h2>
       <p>Verificação de similaridade entre duas imagens</p>
@@ -7,11 +7,20 @@
 
     <div class="compare-grid">
       <!-- Source Image (Liveness) -->
-      <div class="liveness-zone">
+      <div class="liveness-zone" [class.liveness-zone--active]="isLivenessActive()">
         
         <ng-container *ngIf="!isLivenessActive()">
-          <button class="btn-primary" (click)="startLiveness()" [disabled]="isLoading()">
-            📷 Iniciar Captura ao Vivo
+          <button class="liveness-start-btn" (click)="startLiveness()" [disabled]="isLoading()">
+            <span class="liveness-btn-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 7l-7 5 7 5V7z"/>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+              </svg>
+            </span>
+            <span class="liveness-btn-text">
+              <span class="liveness-btn-label">Iniciar Captura ao Vivo</span>
+              <span class="liveness-btn-sub">Verificação de vivacidade</span>
+            </span>
           </button>
         </ng-container>
 

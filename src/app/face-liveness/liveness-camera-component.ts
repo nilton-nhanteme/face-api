@@ -7,7 +7,7 @@ import '@aws-amplify/ui-react/styles.css'; // Estilos obrigatórios do component
 @Component({
   selector: 'app-liveness-camera',
   standalone: true,
-  template: `<div #reactContainer class="liveness-wrapper" style="width: 100%; height: 600px; position: relative;"></div>`
+  template: `<div #reactContainer class="liveness-wrapper"></div>`
 })
 export class LivenessCameraComponent implements OnInit, OnDestroy {
   @ViewChild('reactContainer', { static: true }) reactContainer!: ElementRef;

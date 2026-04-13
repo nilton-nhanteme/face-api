@@ -269,6 +269,137 @@
   border-radius: 999px;
 }
 
+.liveness-zone {
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  max-height: 520px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8fafc;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Quando a câmara está ativa, a liveness-zone ocupa o espaço todo */
+.liveness-zone--active {
+  aspect-ratio: unset;
+  max-height: unset;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* O card vira um overlay fullscreen quando a câmara está ativa */
+.liveness-fullscreen-active {
+  position: fixed !important;
+  inset: 0 !important;
+  max-width: 100vw !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  z-index: 1000;
+  background: #000 !important;
+  box-shadow: none !important;
+  border: none !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.liveness-fullscreen-active .compare-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  height: 100%;
+}
+
+.liveness-fullscreen-active .vs-divider,
+.liveness-fullscreen-active .upload-zone,
+.liveness-fullscreen-active .card-header,
+.liveness-fullscreen-active .actions {
+  display: none !important;
+}
+
+.liveness-start-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.6rem;
+  background: #0f172a;
+  color: #f8fafc;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.55);
+  transition: all 0.22s ease;
+  text-align: left;
+}
+
+.liveness-start-btn:hover:not(:disabled) {
+  background: #1e293b;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px -10px rgba(15, 23, 42, 0.65);
+}
+
+.liveness-start-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.4);
+}
+
+.liveness-start-btn:disabled {
+  background: #cbd5e1;
+  color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.liveness-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.12);
+  flex-shrink: 0;
+}
+
+.liveness-btn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.liveness-btn-label {
+  font-size: 0.97rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.liveness-btn-sub {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}
+
+.liveness-start-btn:disabled .liveness-btn-sub {
+  color: #b0bec5;
+}
+
 .loading-margin {
   margin-top: 1.7rem;
 }
