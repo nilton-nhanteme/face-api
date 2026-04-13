@@ -123,6 +123,59 @@ app.post('/api/verify-face', async (req, res): Promise<any> => {
     return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
   }
 });
+/**
+ * API Proxy para verificar liveness e comparar com imagem alvo
+ */
+app.post('/api/verify-liveness-and-compare', async (req, res): Promise<any> => {
+  try {
+    const { sessionId, targetImageBase64 } = req.body;
+
+    if (!sessionId || !targetImageBase64) {
+      return res.status(400).json({ error: 'sessionId e targetImageBase64 são obrigatórios.' });
+    }
+
+    // 1. Obter imagem do liveness
+    const livenessCommand = new GetFaceLivenessSessionResultsCommand({ SessionId: sessionId });
+    const livenessData = await rekognitionClient.send(livenessCommand);
+
+    if (livenessData.Status !== 'SUCCEEDED') {
+      return res.status(400).json({ error: 'A sessão de liveness não foi concluída corretamente.' });
+    }
+
+    if ((livenessData.Confidence ?? 0) < 90) {
+      return res.status(401).json({
+        error: 'Falha na Prova de Vida. A pessoa não parece ser real.',
+        confidence: livenessData.Confidence
+      });
+    }
+
+    const sourceBytes = livenessData.ReferenceImage?.Bytes;
+    if (!sourceBytes) {
+      return res.status(400).json({ error: 'Nenhuma imagem pôde ser extraída do liveness.' });
+    }
+
+    // 2. Comparar com a imagem alvo
+    const targetBuffer = Buffer.from(targetImageBase64, 'base64');
+    const compareCommand = new CompareFacesCommand({
+      SourceImage: { Bytes: sourceBytes },
+      TargetImage: { Bytes: targetBuffer },
+      SimilarityThreshold: 80,
+    });
+
+    const compareData = await rekognitionClient.send(compareCommand);
+
+    return res.json({
+      livenessConfidence: livenessData.Confidence,
+      FaceMatches: compareData.FaceMatches,
+      UnmatchedFaces: compareData.UnmatchedFaces,
+    });
+
+  } catch (error: any) {
+    console.error('Erro no verify-liveness-and-compare:', error);
+    return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+  }
+});
+
 const angularApp = new AngularNodeAppEngine();
 
 /* 

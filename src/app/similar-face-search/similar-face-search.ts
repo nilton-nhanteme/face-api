@@ -202,9 +202,10 @@ export class SimilarFaceSearch implements OnDestroy {
   }
 
   onLivenessError(err: any) {
+    this.isLivenessActive.set(false);
+    if (err?.type === 'USER_CANCELLED') return;
     console.error('Erro no liveness: ', err);
     this.searchError.set('Erro durante o processo de liveness. ' + (err.message || 'Tente novamente.'));
-    this.isLivenessActive.set(false);
   }
 
   private revokeIndexPreview(): void {

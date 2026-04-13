@@ -104,9 +104,10 @@ export class VerifyFace {
   }
 
   onLivenessError(err: any) {
+    this.isLivenessActive.set(false);
+    if (err?.type === 'USER_CANCELLED') return;
     console.error('Erro no liveness: ', err);
     this.error.set('Erro durante o processo de liveness. ' + (err.message || 'Tente novamente.'));
-    this.isLivenessActive.set(false);
   }
 
   ngOnDestroy(): void {
