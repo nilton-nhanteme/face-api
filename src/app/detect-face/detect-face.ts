@@ -1,94 +1,87 @@
-import { Component, ElementRef, signal, ViewChild } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FaceApiService } from '../services/face-api';
+import { LivenessCameraComponent } from '../face-liveness/liveness-camera-component';
 
 @Component({
   selector: 'app-detect-face',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LivenessCameraComponent],
   templateUrl: './detect-face.html',
   styleUrls: ['./detect-face.css']
 })
 export class DetectFace {
-  @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
-  @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
-
-  public isCameraActive = signal(false);
-  public selectedImage = signal<string | null>(null);
+  public isLivenessActive = signal(false);
+  public sessionId = signal<string | null>(null);
   public isLoading = signal(false);
   public detectionResult = signal<any>(null);
+  public s3Key = signal<string | null>(null);
+  public faceId = signal<string | null>(null);
+  public livenessConfidence = signal<number | null>(null);
+  public error = signal<string | null>(null);
 
-  constructor(private faceapi: FaceApiService) {}
-
-  public async iniciarCamera() {
-    this.selectedImage.set(null);
+  async iniciarLiveness() {
     this.detectionResult.set(null);
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' } 
-      });
-      this.isCameraActive.set(true);
-      
-      // Pequeno delay para garantir que o videoElement está no DOM
-      setTimeout(() => {
-        if (this.videoElement) {
-          this.videoElement.nativeElement.srcObject = stream;
-        }
-      }, 0);
-    } catch (err) {
-      console.error("Erro ao acessar a câmera:", err);
-      alert("Não foi possível acessar a câmera. Verifique as permissões.");
-    }
-  }
-
-  public pararCamera() {
-    if (this.videoElement?.nativeElement.srcObject) {
-      const stream = this.videoElement.nativeElement.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-    }
-    this.isCameraActive.set(false);
-  }                   
-
-  public triggerSnapshot() {
-    const video = this.videoElement.nativeElement;
-    const canvas = this.canvasElement.nativeElement;
-    const context = canvas.getContext('2d');
-
-    if (context) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      const imageData = canvas.toDataURL('image/jpeg');
-      this.selectedImage.set(imageData);
-      this.pararCamera();
-      this.detectFace();
-    }
-  }
-
-  private detectFace() {
-    const base64Data = this.selectedImage()?.split(',')[1];
-    if (!base64Data) return;
-
+    this.s3Key.set(null);
+    this.error.set(null);
+    this.livenessConfidence.set(null);
     this.isLoading.set(true);
-    
-    fetch(this.selectedImage()!)
-      .then(res => res.blob())
-      .then(blob => {
-        this.faceapi.detectFace(blob).subscribe({
-          next: (data) => {
-            console.log('Resultado do Rekognition:', data);
-            this.detectionResult.set(data);
-            this.isLoading.set(false);
-          },
-          error: (err) => {
-            console.error('Erro detalhado na detecção:', err);
-            this.isLoading.set(false);
-            const errorMessage = err?.message || 'Erro desconhecido';
-            alert(`Erro ao processar imagem no AWS Rekognition: ${errorMessage}`);
-          }
-        });
+
+    try {
+      const res = await fetch('/api/create-liveness-session');
+      const data = await res.json();
+      if (!data.sessionId) throw new Error('Sessão não retornou ID.');
+      this.sessionId.set(data.sessionId);
+      this.isLivenessActive.set(true);
+    } catch (err: any) {
+      this.error.set('Erro ao iniciar sessão de liveness: ' + (err.message || err));
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  async onLivenessComplete() {
+    this.isLivenessActive.set(false);
+    this.isLoading.set(true);
+
+    try {
+      const res = await fetch('/api/detect-face-liveness', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: this.sessionId() }),
       });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro desconhecido.');
+
+      this.livenessConfidence.set(data.livenessConfidence);
+      this.s3Key.set(data.s3Key);
+      this.faceId.set(data.faceId ?? null);
+      this.detectionResult.set(data.faceDetails);
+    } catch (err: any) {
+      this.error.set(err.message);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  onLivenessError(err: any) {
+    this.isLivenessActive.set(false);
+    if (err?.type === 'USER_CANCELLED') return;
+    this.error.set('Erro durante o liveness: ' + (err.message || 'Tente novamente.'));
+  }
+
+  onLivenessCancel() {
+    this.isLivenessActive.set(false);
+    this.sessionId.set(null);
+    this.isLoading.set(false);
+  }
+
+      reiniciar() {
+    this.detectionResult.set(null);
+    this.s3Key.set(null);
+    this.faceId.set(null);
+    this.error.set(null);
+    this.livenessConfidence.set(null);
+    this.sessionId.set(null);
   }
 }

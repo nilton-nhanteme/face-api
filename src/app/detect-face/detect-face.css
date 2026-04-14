@@ -224,13 +224,65 @@ button, .btn-primary, .btn-secondary {
   box-sizing: border-box;
 }
 
-video {
+/* Liveness Modal */
+.liveness-modal-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.liveness-camera-container {
   width: 100%;
-  max-height: 300px;
+  max-width: 440px;
+  aspect-ratio: 3 / 4;
+  max-height: 85vh;
+  background: transparent;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: scaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes scaleUp {
+  0% { transform: scale(0.92) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.liveness-badge {
+  display: inline-block;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
   border-radius: 8px;
-  object-fit: cover;
-  background-color: #0f172a;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-  transform: scaleX(-1); /* Espelha a imagem para funcionar como um espelho */
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.s3-info {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0 0 1rem;
+  word-break: break-all;
+}
+
+.s3-info code {
+  background: #f1f5f9;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
 }

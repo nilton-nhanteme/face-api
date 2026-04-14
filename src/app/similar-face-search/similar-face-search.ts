@@ -26,6 +26,8 @@ export class SimilarFaceSearch implements OnDestroy {
 
   public indexPreviews = signal<Array<{ name: string; url: string }>>([]);
 
+  public deleteLoading = signal(false);
+  public deleteStatus = signal<string | null>(null);
   public createCollectionLoading = signal(false);
   public indexFaceLoading = signal(false);
   public searchLoading = signal(false);
@@ -248,6 +250,33 @@ export class SimilarFaceSearch implements OnDestroy {
 
   refreshCollections(): void {
     this.loadCollections();
+  }
+
+  async deleteCollectionFaces(): Promise<void> {
+    const collection = this.activeCollectionId.trim();
+    if (!collection) {
+      this.deleteStatus.set('Selecione uma coleção primeiro.');
+      return;
+    }
+
+    if (!confirm(`Apagar TODAS as faces e imagens S3 da coleção "${collection}"?`)) return;
+
+    this.deleteLoading.set(true);
+    this.deleteStatus.set(null);
+
+    try {
+      const res = await fetch(`/api/admin/collection/${encodeURIComponent(collection)}/faces`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      this.deleteStatus.set(data.message);
+      this.searchResult.set(null);
+    } catch (err: any) {
+      this.deleteStatus.set('Erro: ' + (err.message || 'Tente novamente.'));
+    } finally {
+      this.deleteLoading.set(false);
+    }
   }
 
   private generateCollectionId(): string {

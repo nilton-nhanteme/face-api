@@ -306,13 +306,17 @@
 
 .liveness-camera-container {
   width: 100%;
-  max-width: 440px; /* Reduzido para ficar idêntico aos telemóveis */
-  height: auto; /* Deixa o próprio vídeo da amazon ditar a altura! */
-  background: transparent; /* Removemos o preto no fundo */
+  max-width: 440px;
+  height: auto;
+  aspect-ratio: 3 / 4; /* Mantém uma proporção retangular fixa (retrato) perfeita em qualquer ecrã */
+  max-height: 85vh; /* Num ecrã pequeno não passa dos limites */
+  background: transparent;
   border-radius: 28px;
   overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   animation: scaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes scaleUp {

@@ -15,7 +15,11 @@
         <button class="btn btn-ghost" (click)="refreshCollections()" [disabled]="loadingCollections()">
           {{ loadingCollections() ? 'Atualizando...' : 'Atualizar' }}
         </button>
+        <button class="btn btn-danger" (click)="deleteCollectionFaces()" [disabled]="deleteLoading() || !activeCollectionId">
+          {{ deleteLoading() ? 'Apagando...' : 'Apagar Fotos' }}
+        </button>
       </div>
+      <p class="status delete-status" *ngIf="deleteStatus()">{{ deleteStatus() }}</p>
     </section>
 
     <section class="panel-grid">

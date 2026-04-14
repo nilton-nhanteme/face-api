@@ -15,11 +15,13 @@ import {
   CompareFacesCommand, 
   SearchFacesByImageCommand,
   CreateCollectionCommand,
-  ListCollectionsCommand
+  ListCollectionsCommand,
+  ListFacesCommand,
+  DeleteFacesCommand
 } from '@aws-sdk/client-rekognition';
 import { environment } from './environments/environment';
 import { error } from 'node:console';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { PutObjectCommand, S3Client, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
@@ -96,6 +98,74 @@ app.get('/api/create-liveness-session', async (req, res): Promise<any> => {
     });
   }
 })
+
+/**
+ * Detecta face usando imagem capturada pelo liveness e salva no S3
+ */
+app.post('/api/detect-face-liveness', async (req, res): Promise<any> => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId é obrigatório.' });
+    }
+
+    // 1. Busca resultado da sessão de liveness
+    const livenessCommand = new GetFaceLivenessSessionResultsCommand({ SessionId: sessionId });
+    const livenessData = await rekognitionClient.send(livenessCommand);
+
+    if (livenessData.Status !== 'SUCCEEDED') {
+      return res.status(400).json({ error: 'A sessão de liveness não foi concluída corretamente.' });
+    }
+
+    if ((livenessData.Confidence ?? 0) < 90) {
+      return res.status(401).json({
+        error: 'Falha na Prova de Vida. A pessoa não parece ser real.',
+        confidence: livenessData.Confidence,
+      });
+    }
+
+    const imageBytes = livenessData.ReferenceImage?.Bytes;
+    if (!imageBytes) {
+      return res.status(400).json({ error: 'Nenhuma imagem pôde ser extraída do liveness.' });
+    }
+
+    // 2. Detecta atributos da face
+    const detectCommand = new DetectFacesCommand({
+      Image: { Bytes: imageBytes },
+      Attributes: ['ALL'],
+    });
+    const faceDetails = await rekognitionClient.send(detectCommand);
+
+    // 3. Salva imagem no S3 (raiz do bucket, igual às imagens indexadas manualmente)
+    const s3Key = `${sessionId}.jpg`;
+    await s3Client.send(new PutObjectCommand({
+      Bucket: s3BucketName,
+      Key: s3Key,
+      Body: Buffer.from(imageBytes),
+      ContentType: 'image/jpeg',
+    }));
+
+    // 4. Indexa face na coleção "detected"
+    const indexCommand = new IndexFacesCommand({
+      CollectionId: 'Liveness',
+      Image: { Bytes: imageBytes },
+      ExternalImageId: sessionId,
+    });
+    const indexData = await rekognitionClient.send(indexCommand);
+    const faceId = indexData.FaceRecords?.[0]?.Face?.FaceId ?? null;
+
+    return res.json({
+      livenessConfidence: livenessData.Confidence,
+      s3Key,
+      faceId,
+      faceDetails,
+    });
+
+  } catch (error: any) {
+    console.error('Erro no detect-face-liveness:', error);
+    return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+  }
+});
 
 /**
  * API Proxy para o CompareFaces (Verificação entre duas imagens)
@@ -314,6 +384,64 @@ app.get('/api/admin/collections', async (_req, res): Promise<any> => {
     });
   } catch (error: any) {
     console.error('Erro ao listar coleções do Rekognition:', error);
+    return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+  }
+});
+
+/*
+API Proxy para deletar todas as fotos de uma coleção no S3 e as faces no Rekognition
+*/
+app.delete('/api/admin/collection/:collectionId/faces', async (req, res): Promise<any> => {
+  try {
+    const { collectionId } = req.params;
+
+    // 1. Lista todas as faces da coleção para obter os ExternalImageIds
+    const allFaceIds: string[] = [];
+    const allExternalImageIds: string[] = [];
+    let nextToken: string | undefined;
+
+    do {
+      const listCommand = new ListFacesCommand({
+        CollectionId: collectionId,
+        MaxResults: 100,
+        NextToken: nextToken,
+      });
+      const listData = await rekognitionClient.send(listCommand);
+      for (const face of listData.Faces ?? []) {
+        if (face.FaceId) allFaceIds.push(face.FaceId);
+        if (face.ExternalImageId) allExternalImageIds.push(face.ExternalImageId);
+      }
+      nextToken = listData.NextToken;
+    } while (nextToken);
+
+    if (allFaceIds.length === 0) {
+      return res.json({ message: 'Nenhuma face encontrada na coleção.', deleted: 0 });
+    }
+
+    // 2. Apaga as faces do Rekognition (máx 4096 por chamada)
+    for (let i = 0; i < allFaceIds.length; i += 4096) {
+      await rekognitionClient.send(new DeleteFacesCommand({
+        CollectionId: collectionId,
+        FaceIds: allFaceIds.slice(i, i + 4096),
+      }));
+    }
+
+    // 3. Apaga as imagens correspondentes no S3
+    const s3Keys = allExternalImageIds.map(id => ({ Key: `${id}.jpg` }));
+    for (let i = 0; i < s3Keys.length; i += 1000) {
+      await s3Client.send(new DeleteObjectsCommand({
+        Bucket: s3BucketName,
+        Delete: { Objects: s3Keys.slice(i, i + 1000) },
+      }));
+    }
+
+    return res.json({
+      message: `${allFaceIds.length} face(s) apagada(s) da coleção '${collectionId}' e do S3.`,
+      deleted: allFaceIds.length,
+    });
+
+  } catch (error: any) {
+    console.error('Erro ao apagar faces:', error);
     return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
   }
 });

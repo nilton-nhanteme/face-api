@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, OnDestroy, OnInit, Output, ViewChild, EventEmitter } from "@angular/core";
+import { Component, ElementRef, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild, EventEmitter } from "@angular/core";
 import * as React from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { FaceLivenessDetector } from '@aws-amplify/ui-react-liveness';
@@ -10,16 +10,19 @@ import { FaceLivenessDetector } from '@aws-amplify/ui-react-liveness';
   styles: [`
     .liveness-inline {
       width: 100%;
-      height: auto; /* Remove regras chatas de tamanho fechado fixo */
+      height: 100%; /* Força a ocupar a altura do container */
       border-radius: 28px;
       overflow: hidden;
-      display: block;
+      display: flex;
+      flex-direction: column;
       background: transparent !important;
     }
     
     /* Disfarça eventuais bordas e fundos agressivos do componente Amplify React */
     ::ng-deep [data-amplify-liveness="true"],
     ::ng-deep .amplify-liveness {
+      flex: 1;
+      height: 100% !important;
       background: transparent !important;
       background-color: transparent !important;
       border-radius: 28px !important;
@@ -63,7 +66,7 @@ import { FaceLivenessDetector } from '@aws-amplify/ui-react-liveness';
     }
   `]
 })
-export class LivenessCameraComponent implements OnInit, OnDestroy {
+export class LivenessCameraComponent implements OnInit, OnChanges, OnDestroy {
   @ViewChild('reactContainer', { static: true }) reactContainer!: ElementRef;
 
   @Input() sessionId!: string;
@@ -76,6 +79,12 @@ export class LivenessCameraComponent implements OnInit, OnDestroy {
   ngOnInit() {
     if (typeof window !== 'undefined') {
       this.root = createRoot(this.reactContainer.nativeElement);
+      this.renderReactComponent();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['sessionId'] && !changes['sessionId'].firstChange && this.root) {
       this.renderReactComponent();
     }
   }
