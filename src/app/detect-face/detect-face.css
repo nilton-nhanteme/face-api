@@ -224,41 +224,33 @@ button, .btn-primary, .btn-secondary {
   box-sizing: border-box;
 }
 
-/* Liveness Modal */
+/* Liveness Fullscreen - fundo preto total, SDK em container proporcional */
 .liveness-modal-overlay {
   position: fixed;
   inset: 0;
   width: 100vw;
   height: 100dvh;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
-  box-sizing: border-box;
-  animation: fadeIn 0.3s ease-out forwards;
+  animation: livenessEnter 0.35s ease-out forwards;
+}
+
+@keyframes livenessEnter {
+  from { opacity: 0; backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+  to   { opacity: 1; backdrop-filter: blur(6px);  -webkit-backdrop-filter: blur(6px); }
 }
 
 .liveness-camera-container {
-  width: 100%;
-  max-width: 440px;
-  aspect-ratio: 3 / 4;
-  max-height: 85vh;
+  width: min(480px, 100vw);
+  height: min(640px, 100dvh);
   background: transparent;
-  border-radius: 28px;
-  overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  animation: scaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   display: flex;
   flex-direction: column;
-}
-
-@keyframes scaleUp {
-  0% { transform: scale(0.92) translateY(20px); opacity: 0; }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
 .liveness-badge {

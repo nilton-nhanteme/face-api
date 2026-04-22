@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild, EventEmitter } from "@angular/core";
+import { Component, ElementRef, Input, OnDestroy, OnInit, Output, ViewChild, EventEmitter } from "@angular/core";
 import * as React from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { FaceLivenessDetector } from '@aws-amplify/ui-react-liveness';
@@ -10,35 +10,35 @@ import { FaceLivenessDetector } from '@aws-amplify/ui-react-liveness';
   styles: [`
     .liveness-inline {
       width: 100%;
-      height: 100%; /* Força a ocupar a altura do container */
-      border-radius: 28px;
-      overflow: hidden;
+      height: 100%;
       display: flex;
       flex-direction: column;
-      background: transparent !important;
     }
     
-    /* Disfarça eventuais bordas e fundos agressivos do componente Amplify React */
     ::ng-deep [data-amplify-liveness="true"],
     ::ng-deep .amplify-liveness {
       flex: 1;
+      width: 100% !important;
       height: 100% !important;
       background: transparent !important;
-      background-color: transparent !important;
-      border-radius: 28px !important;
-      overflow: hidden !important;
-      box-shadow: none !important;
-      border: none !important;
     }
-    
-    /* Remove as caixas cinzentas/pretas do fundo do player da AWS */
+
+    /* Remove fundos pretos internos do SDK */
     ::ng-deep .amplify-liveness-container,
-    ::ng-deep .amplify-liveness-video-container {
+    ::ng-deep .amplify-liveness-video-container,
+    ::ng-deep .amplify-liveness-start-screen,
+    ::ng-deep .amplify-liveness-camera-module,
+    ::ng-deep [class*="amplify-liveness"] {
       background: transparent !important;
       background-color: transparent !important;
     }
+
+    /* O vídeo em si pode ter fundo preto antes de carregar — deixa */
+    ::ng-deep .amplify-liveness-video-container video {
+      background: #000 !important;
+    }
     
-    /* Estilização Glassmorphism para os Toasts/Alertas/Instruções da AWS */
+    /* Estilização dos Toasts/Alertas/Instruções da AWS */
     ::ng-deep .amplify-liveness-toast,
     ::ng-deep .amplify-alert,
     ::ng-deep .amplify-liveness-instruction-container,
@@ -60,13 +60,13 @@ import { FaceLivenessDetector } from '@aws-amplify/ui-react-liveness';
       color: #ffffff !important;
     }
     
-    /* Elimina APENAS o alerta de fotossensibilidade inicial (que usa variation info) */
+    /* Elimina o alerta de fotossensibilidade inicial */
     ::ng-deep .amplify-alert[data-variation="info"] {
       display: none !important;
     }
   `]
 })
-export class LivenessCameraComponent implements OnInit, OnChanges, OnDestroy {
+export class LivenessCameraComponent implements OnInit, OnDestroy {
   @ViewChild('reactContainer', { static: true }) reactContainer!: ElementRef;
 
   @Input() sessionId!: string;
@@ -79,12 +79,6 @@ export class LivenessCameraComponent implements OnInit, OnChanges, OnDestroy {
   ngOnInit() {
     if (typeof window !== 'undefined') {
       this.root = createRoot(this.reactContainer.nativeElement);
-      this.renderReactComponent();
-    }
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['sessionId'] && !changes['sessionId'].firstChange && this.root) {
       this.renderReactComponent();
     }
   }
